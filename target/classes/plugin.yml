@@ -1,0 +1,7 @@
+name: MoCore
+version: '0.0.1'
+main: mv.mossuh.mocore.MoCore
+api-version: '1.13'
+
+softdepend:
+  - NBTAPI

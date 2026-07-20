@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="MoCore:jar">
+    <output-path>$USER_HOME$/Escritorio/MoJars</output-path>
+    <root id="archive" name="MoCore.jar">
+      <element id="module-output" name="MoCore" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/ADVENTURE-LIBRARIES 1.0.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/net/objecthunter/exp4j/0.4.8/exp4j-0.4.8.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
