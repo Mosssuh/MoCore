@@ -28,6 +28,9 @@ public class PluginsChecker {
         dependencies.put(PluginType.FastAsyncWorldEdit, new String[]{"FastAsyncWorldEdit"});
         dependencies.put(PluginType.Vault, new String[]{"Vault"});
         dependencies.put(PluginType.DecentHolograms, new String[]{"DecentHolograms"});
+        dependencies.put(PluginType.MoPets, new String[]{"MoPets"});
+        dependencies.put(PluginType.MoArmors, new String[]{"MoArmors"});
+        dependencies.put(PluginType.MoChestShop, new String[]{"MoChestShop"});
     }
 
     public void startCheckingDependencies(MoCore main) {

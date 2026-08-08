@@ -1,6 +1,7 @@
 package mv.mossuh.mocore.NBT;
 
 import de.tr7zw.nbtapi.NBT;
+import de.tr7zw.nbtapi.iface.ReadWriteItemNBT;
 import de.tr7zw.nbtapi.iface.ReadWriteNBT;
 import de.tr7zw.nbtapi.iface.ReadWriteNBTList;
 import de.tr7zw.nbtapi.iface.ReadableNBTList;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 
 public class NBTMethods {
@@ -80,6 +82,12 @@ public class NBTMethods {
                         .addCompound()
                         .setString("Value", value);
             });
+        }
+    }
+
+    public static void modify(ItemStack item, Consumer<ReadWriteItemNBT> consumer) {
+        if (item != null && item.getType() != Material.AIR && item.getAmount() > 0) {
+            NBT.modify(item, consumer);
         }
     }
 
