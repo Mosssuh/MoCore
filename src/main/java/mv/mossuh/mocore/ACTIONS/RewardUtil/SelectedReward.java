@@ -46,7 +46,7 @@ public class SelectedReward {
             }
 
             String[] rewardSplit2 = rewardSplit[0].replace(" ", "").split(":", 2);
-            RewardType rewardType = RewardType.valueOf(rewardSplit2[0].toUpperCase());
+            RewardType rewardType = RewardType.convert(rewardSplit2[0]);
             RewardReceiver rewardReceiver = getRewardReceiver(rewardSplit2);
 
             if (rewardSplit.length == 2) {
