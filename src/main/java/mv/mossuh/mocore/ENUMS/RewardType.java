@@ -66,6 +66,7 @@ public class RewardType {
     }
 
     public static RewardType convert(String rewardType) {
+        if (rewardType == null) return NONE;
         return new RewardType(rewardType);
     }
 

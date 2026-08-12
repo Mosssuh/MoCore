@@ -77,6 +77,7 @@ public class EventType {
     }
 
     public static EventType convert(String applicator, boolean hasEntity, boolean hasArgument) {
+        if (applicator == null) return INVALID;
         return new EventType(applicator, hasEntity, hasArgument);
     }
 

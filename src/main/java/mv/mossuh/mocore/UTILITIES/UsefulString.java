@@ -10,21 +10,30 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class UsefulString{
+public class UsefulString<T extends UsefulString<T>> {
     private StringBuilder builder;
     private boolean isString = false;
-    public UsefulString(String string) {
+    protected UsefulString(String string) {
         if (string != null && !string.isEmpty()) { this.isString = true; }
         this.builder = new StringBuilder(string != null ? string : "");
     }
 
+    public static UsefulString<?> get(String string) {
+        return new Self(string);
+    }
+
+    private static final class Self extends UsefulString<Self> {
+        private Self(String string) { super(string); }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected T self() { return (T) this; }
 
     private void replacePattern(Pattern pattern, Function<Matcher, String> replacementFunction) {
         Matcher matcher = pattern.matcher(builder);
@@ -37,17 +46,40 @@ public class UsefulString{
         builder = new StringBuilder(result.toString());
     }
 
+    private void replacePatternVariables(Pattern pattern, Map<String, String> map) {
+        Matcher matcher = pattern.matcher(builder);
+        StringBuilder result = null;
+        int lastEnd = 0;
+        while (matcher.find()) {
+            String replacement = map.get(matcher.group());
+            if (replacement != null) {
+                if (result == null) {
+                    result = new StringBuilder(builder.length());
+                }
+                result.append(builder, lastEnd, matcher.start()).append(replacement);
+                lastEnd = matcher.end();
+            }
+        }
+        if (result != null) {
+            result.append(builder, lastEnd, builder.length());
+            builder = result;
+        }
+    }
+
 
     private static final Pattern HEX_PATTERN = Pattern.compile("#[a-fA-F0-9]{6}");
+    private static final Pattern VARIABLE_TOKEN_PATTERN = Pattern.compile("%[^%]+%");
 
+    /*
     public static UsefulString get(String string) {
         return new UsefulString(string);
     }
+     */
 
     public boolean isString() { return isString; }
 
-    public UsefulString hex() {
-        if (ServerVersion.isAtLeast(ServerVersion.MC1_16)) {
+    public T hex() {
+        if (isString && builder.indexOf("#") != -1 && ServerVersion.isAtLeast(ServerVersion.MC1_16)) {
             replacePattern(HEX_PATTERN, matcher -> {
                 String hex = matcher.group().substring(1); // Remove #
                 StringBuilder hexColor = new StringBuilder("§x");
@@ -58,26 +90,26 @@ public class UsefulString{
             });
         }
         builder = new StringBuilder(ChatColor.translateAlternateColorCodes('&', builder.toString()));
-        return this;
+        return self();
     }
 
 
-    public UsefulString replaceString(String target, String replacement) {
+    public T replaceString(String target, String replacement) {
         UsefulMethods.replacePlaceholder(builder, target, replacement);
-        return this;
+        return self();
     }
 
-    public UsefulString setPlaceholders(Player player) {
+    public T setPlaceholders(Player player) {
         if (isString) {
             if (player != null && player.isOnline()) {
                 String string = builder.toString();
                 builder = new StringBuilder(PlaceholderAPI.setPlaceholders(player, string));
             }
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setPlaceholders(CommandSender sender) {
+    public T setPlaceholders(CommandSender sender) {
         if (isString) {
             if (sender instanceof Player) {
                 Player player = (Player) sender;
@@ -85,20 +117,20 @@ public class UsefulString{
                 builder = new StringBuilder(PlaceholderAPI.setPlaceholders(player, string));
             }
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setPlaceholders(OfflinePlayer player) {
+    public T setPlaceholders(OfflinePlayer player) {
         if (isString) {
             if (player != null) {
                 String string = builder.toString();
                 builder = new StringBuilder(PlaceholderAPI.setPlaceholders(player, string));
             }
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setPlaceholders(UUID uuid) {
+    public T setPlaceholders(UUID uuid) {
         if (isString) {
             if (uuid != null) {
                 if (Bukkit.getPlayer(uuid) != null) {
@@ -112,61 +144,93 @@ public class UsefulString{
                 }
             }
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setArgs(CommandArgs args) {
-        if (args != null && args.hasArgs()) {
+    public T setArgs(CommandArgs args) {
+        if (isString && args != null && args.hasArgs() && builder.indexOf("%args_") != -1) {
             List<String> argList = args.getArgs();
-            for (int i = 0; i < argList.size(); i++) {
-                UsefulMethods.replacePlaceholder(builder, "%args_" + (i + 1) + "%", argList.get(i));
+            if (!argList.isEmpty()) {
+                Map<String, String> tokenMap = new HashMap<>(Math.max(8, argList.size() * 2));
+                for (int i = 0; i < argList.size(); i++) {
+                    tokenMap.put("%args_" + (i + 1) + "%", argList.get(i));
+                }
+                replacePatternVariables(VARIABLE_TOKEN_PATTERN, tokenMap);
             }
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setVariables(List<VariableArg> variables) {
-        if (variables != null && !variables.isEmpty()) {
+    public T setVariables(List<VariableArg> variables) {
+        if (isString && variables != null && !variables.isEmpty() && builder.indexOf("%") != -1) {
+            Map<String, String> tokens = null;
+            List<VariableArg> exceptions = null;
+
             for (VariableArg variable : variables) {
                 if (variable.isVariable() && variable.isValue()) {
+                    String key = variable.getVariable();
+                    if (isToken(key)) {
+                        if (tokens == null) {
+                            tokens = new HashMap<>(Math.max(16, variables.size() * 2));
+                        }
+                        tokens.put(key, variable.getValue());
+                    } else {
+                        if (exceptions == null) {
+                            exceptions = new ArrayList<>();
+                        }
+                        exceptions.add(variable);
+                    }
+                }
+            }
+
+            if (tokens != null) {
+                replacePatternVariables(VARIABLE_TOKEN_PATTERN, tokens);
+            }
+
+            if (exceptions != null) {
+                for (VariableArg variable : exceptions) {
                     UsefulMethods.replacePlaceholder(builder, variable.getVariable(), variable.getValue());
                 }
             }
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setRandomNumberVariable() {
+    private static boolean isToken(String key) {
+        return key != null && key.length() > 1 && key.charAt(0) == '%' && key.charAt(key.length() - 1) == '%';
+    }
+
+    public T setRandomNumberVariable() {
         String string = builder.toString();
         builder = new StringBuilder(UsefulMethods.setRandomNumber(string));
-        return this;
+        return self();
     }
 
-    public UsefulString setMathPlaceholder() {
+    public T setMathPlaceholder() {
         if (isString) {
             String string = builder.toString();
             builder = new StringBuilder(UsefulMethods.setMathPlaceholder(string));
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setChangeOutputPlaceholder() {
+    public T setChangeOutputPlaceholder() {
         if (isString) {
             String string = builder.toString();
             builder = new StringBuilder(UsefulMethods.setChangeOutputPlaceholder(string));
         }
-        return this;
+        return self();
     }
 
-    public UsefulString setTimeFormatter(TimeFormat format) {
+    public T setTimeFormatter(TimeFormat format) {
         if (isString) {
             String string = builder.toString();
             builder = new StringBuilder(UsefulMethods.setTimeFormatter(string, format));
         }
-        return this;
+        return self();
     }
 
-    public UsefulString removeColors() {
+    public T removeColors() {
         String string = builder.toString();
 
         string = ChatColor.stripColor(string);
@@ -174,7 +238,7 @@ public class UsefulString{
         string = ChatColor.stripColor(string);
 
         builder = new StringBuilder(string);
-        return this;
+        return self();
     }
 
     public boolean evaluateString() {
