@@ -16,20 +16,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class UsefulString<T extends UsefulString<T>> {
+public abstract class UsefulString<T extends UsefulString<T>> {
     private StringBuilder builder;
     private boolean isString = false;
+
     protected UsefulString(String string) {
         if (string != null && !string.isEmpty()) { this.isString = true; }
         this.builder = new StringBuilder(string != null ? string : "");
-    }
-
-    public static UsefulString<?> get(String string) {
-        return new Self(string);
-    }
-
-    private static final class Self extends UsefulString<Self> {
-        private Self(String string) { super(string); }
     }
 
     @SuppressWarnings("unchecked")
@@ -37,44 +30,100 @@ public class UsefulString<T extends UsefulString<T>> {
 
     private void replacePattern(Pattern pattern, Function<Matcher, String> replacementFunction) {
         Matcher matcher = pattern.matcher(builder);
-        StringBuffer result = new StringBuffer();
+        StringBuffer result = new StringBuffer(builder.length());
         while (matcher.find()) {
-            String replacement = replacementFunction.apply(matcher);
-            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacementFunction.apply(matcher)));
         }
         matcher.appendTail(result);
-        builder = new StringBuilder(result.toString());
+        builder = new StringBuilder(result);
     }
 
-    private void replacePatternVariables(Pattern pattern, Map<String, String> map) {
-        Matcher matcher = pattern.matcher(builder);
-        StringBuilder result = null;
-        int lastEnd = 0;
-        while (matcher.find()) {
-            String replacement = map.get(matcher.group());
-            if (replacement != null) {
-                if (result == null) {
-                    result = new StringBuilder(builder.length());
+    private static final class TrieNode {
+        final Map<Character, TrieNode> children = new HashMap<>();
+        TrieNode fail;
+        String value;
+        int length;
+    }
+
+    private static TrieNode buildAutomaton(Map<String, String> map) {
+        TrieNode root = new TrieNode();
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String key = entry.getKey();
+            if (key == null || key.isEmpty()) continue;
+            TrieNode node = root;
+            for (int i = 0; i < key.length(); i++) {
+                node = node.children.computeIfAbsent(key.charAt(i), c -> new TrieNode());
+            }
+            node.value = entry.getValue();
+            node.length = key.length();
+        }
+
+        root.fail = root;
+        Deque<TrieNode> queue = new ArrayDeque<TrieNode>();
+        for (TrieNode child : root.children.values()) {
+            child.fail = root;
+            queue.add(child);
+        }
+        while (!queue.isEmpty()) {
+            TrieNode current = queue.poll();
+            for (Map.Entry<Character, TrieNode> e : current.children.entrySet()) {
+                char c = e.getKey();
+                TrieNode child = e.getValue();
+                TrieNode failNode = current.fail;
+                while (failNode != root && !failNode.children.containsKey(c)) {
+                    failNode = failNode.fail;
                 }
-                result.append(builder, lastEnd, matcher.start()).append(replacement);
-                lastEnd = matcher.end();
+                TrieNode candidate = failNode.children.get(c);
+                child.fail = (candidate != null && candidate != child) ? candidate : root;
+                queue.add(child);
             }
         }
+        return root;
+    }
+
+    private void replaceLiteralTokens(Map<String, String> map) {
+        if (map == null || map.isEmpty() || builder.length() == 0) return;
+
+        TrieNode root = buildAutomaton(map);
+        TrieNode node = root;
+
+        StringBuilder result = null;
+        int lastEnd = 0;
+        int len = builder.length();
+
+        for (int i = 0; i < len; i++) {
+            char c = builder.charAt(i);
+            TrieNode next = node.children.get(c);
+            while (next == null && node != root) {
+                node = node.fail;
+                next = node.children.get(c);
+            }
+            node = (next != null) ? next : root;
+
+            TrieNode match = node;
+            while (match != root && match.value == null) {
+                match = match.fail;
+            }
+
+            if (match.value != null) {
+                int matchStart = i - match.length + 1;
+                if (result == null) {
+                    result = new StringBuilder(len);
+                }
+                result.append(builder, lastEnd, matchStart).append(match.value);
+                lastEnd = i + 1;
+                node = root; // no-overlapping: seguimos limpios después del match
+            }
+        }
+
         if (result != null) {
-            result.append(builder, lastEnd, builder.length());
+            result.append(builder, lastEnd, len);
             builder = result;
         }
     }
 
 
     private static final Pattern HEX_PATTERN = Pattern.compile("#[a-fA-F0-9]{6}");
-    private static final Pattern VARIABLE_TOKEN_PATTERN = Pattern.compile("%[^%]+%");
-
-    /*
-    public static UsefulString get(String string) {
-        return new UsefulString(string);
-    }
-     */
 
     public boolean isString() { return isString; }
 
@@ -148,56 +197,37 @@ public class UsefulString<T extends UsefulString<T>> {
     }
 
     public T setArgs(CommandArgs args) {
-        if (isString && args != null && args.hasArgs() && builder.indexOf("%args_") != -1) {
+        if (isString && args != null && args.hasArgs()) {
             List<String> argList = args.getArgs();
             if (!argList.isEmpty()) {
                 Map<String, String> tokenMap = new HashMap<>(Math.max(8, argList.size() * 2));
                 for (int i = 0; i < argList.size(); i++) {
                     tokenMap.put("%args_" + (i + 1) + "%", argList.get(i));
                 }
-                replacePatternVariables(VARIABLE_TOKEN_PATTERN, tokenMap);
+                replaceLiteralTokens(tokenMap);
             }
         }
         return self();
     }
 
     public T setVariables(List<VariableArg> variables) {
-        if (isString && variables != null && !variables.isEmpty() && builder.indexOf("%") != -1) {
-            Map<String, String> tokens = null;
-            List<VariableArg> exceptions = null;
+        if (isString && variables != null && !variables.isEmpty()) {
+            Map<String, String> tokenMap = null;
 
             for (VariableArg variable : variables) {
                 if (variable.isVariable() && variable.isValue()) {
-                    String key = variable.getVariable();
-                    if (isToken(key)) {
-                        if (tokens == null) {
-                            tokens = new HashMap<>(Math.max(16, variables.size() * 2));
-                        }
-                        tokens.put(key, variable.getValue());
-                    } else {
-                        if (exceptions == null) {
-                            exceptions = new ArrayList<>();
-                        }
-                        exceptions.add(variable);
+                    if (tokenMap == null) {
+                        tokenMap = new HashMap<>(Math.max(16, variables.size() * 2));
                     }
+                    tokenMap.put(variable.getVariable(), variable.getValue());
                 }
             }
 
-            if (tokens != null) {
-                replacePatternVariables(VARIABLE_TOKEN_PATTERN, tokens);
-            }
-
-            if (exceptions != null) {
-                for (VariableArg variable : exceptions) {
-                    UsefulMethods.replacePlaceholder(builder, variable.getVariable(), variable.getValue());
-                }
+            if (tokenMap != null) {
+                replaceLiteralTokens(tokenMap);
             }
         }
         return self();
-    }
-
-    private static boolean isToken(String key) {
-        return key != null && key.length() > 1 && key.charAt(0) == '%' && key.charAt(key.length() - 1) == '%';
     }
 
     public T setRandomNumberVariable() {
@@ -255,7 +285,7 @@ public class UsefulString<T extends UsefulString<T>> {
 
     public void sendMessage(CommandSender sender) {
         if (sender instanceof Player) {
-            sender.sendMessage(builder.toString());
+            ((Player) sender).sendMessage(builder.toString());
         } else {
             Bukkit.getConsoleSender().sendMessage(builder.toString());
         }
@@ -321,6 +351,14 @@ public class UsefulString<T extends UsefulString<T>> {
             }
         }
         return false;
+    }
+
+    public static UsefulString<?> get(String string) {
+        return new Self(string);
+    }
+
+    private static final class Self extends UsefulString<Self> {
+        private Self(String string) { super(string); }
     }
 }
 

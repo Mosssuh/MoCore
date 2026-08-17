@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 public class GUIItem {
+    private Object identifier;
 
     private ClickListener clickListener;
 
@@ -68,5 +69,12 @@ public class GUIItem {
     }
     public void setItemStack(MoItemStack itemStack) {
         if (itemStack != null) { this.itemStack = itemStack.obtain(); }
+    }
+
+    public void setIdentifier(Object object) {
+        this.identifier = object;
+    }
+    public Object getIdentifier() {
+        return identifier;
     }
 }

@@ -11,8 +11,8 @@ public class PaginatedInventoryConfiguration {
     private String nextPage = "";
     private MoItemStack backItem = new MoItemStack(null, null, null);
     private MoItemStack nextItem = new MoItemStack(null, null, null);
-    private int backItemSlot = 0;
-    private int nextItemSlot = 8;
+    private int backItemSlot = 45;
+    private int nextItemSlot = 53;
 
     public PaginatedInventoryConfiguration(String noPreviousPages, String noAdditionalPages, String previousPage, String currentPage, String nextPage, MoItemStack backItem, MoItemStack nextItem, Integer backItemSlot, Integer nextItemSlot) {
         if (noPreviousPages != null) { this.noPreviousPages = UsefulString.get(noPreviousPages).hex().apply(); }
@@ -59,30 +59,6 @@ public class PaginatedInventoryConfiguration {
         this.noAdditionalPages = UsefulString.get(noAdditionalPages).hex().apply();
     }
 
-    public String getPreviousPage() {
-        return this.previousPage;
-    }
-
-    public void setPreviousPage(String previousPage) {
-        this.previousPage = UsefulString.get(previousPage).hex().apply();
-    }
-
-    public String getCurrentPage() {
-        return this.currentPage;
-    }
-
-    public void setCurrentPage(String currentPage) {
-        this.currentPage = UsefulString.get(currentPage).hex().apply();
-    }
-
-    public String getNextPage() {
-        return this.nextPage;
-    }
-
-    public void setNextPage(String nextPage) {
-        this.nextPage = UsefulString.get(nextPage).hex().apply();
-    }
-
     public MoItemStack getBackItem() {
         return backItem;
     }
@@ -96,5 +72,11 @@ public class PaginatedInventoryConfiguration {
 
     public void setBackItem(MoItemStack backItem) {
         if (backItem != null) { this.backItem = backItem; }
+    }
+    public void setBackItemSlot(int slot) {
+        this.backItemSlot = slot;
+    }
+    public void setNextItemSlot(int slot) {
+        this.nextItemSlot = slot;
     }
 }

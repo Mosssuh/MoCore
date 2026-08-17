@@ -1,5 +1,7 @@
 package mv.mossuh.mocore.ITEM;
 
+import de.tr7zw.nbtapi.iface.ReadWriteItemNBT;
+import mv.mossuh.mocore.NBT.NBTMethods;
 import mv.mossuh.mocore.UTILITIES.UsefulString;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemFlag;
@@ -8,6 +10,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class MoItemStack {
 
@@ -127,6 +130,11 @@ public class MoItemStack {
             itemMeta.addItemFlags(itemFlags);
             itemStack.setItemMeta(itemMeta);
         }
+        return this;
+    }
+
+    public MoItemStack setTags(Consumer<ReadWriteItemNBT> consumer) {
+        NBTMethods.modify(itemStack, consumer);
         return this;
     }
 

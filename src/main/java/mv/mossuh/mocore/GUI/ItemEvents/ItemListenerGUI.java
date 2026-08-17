@@ -68,7 +68,7 @@ public class ItemListenerGUI implements Listener {
             }
         } else if (holder instanceof SingleGUI) {
             SingleGUI singleGUI = (SingleGUI) holder;
-            guiItem = singleGUI.getButton(clickedSlot);
+            guiItem = singleGUI.getItem(clickedSlot);
 
             if (guiItem != null && guiItem.getItemListener() != null) {
                 ClickListener itemListener = guiItem.getItemListener();
