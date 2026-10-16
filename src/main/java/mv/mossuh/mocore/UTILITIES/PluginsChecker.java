@@ -31,6 +31,14 @@ public class PluginsChecker {
         dependencies.put(PluginType.MoPets, new String[]{"MoPets"});
         dependencies.put(PluginType.MoArmors, new String[]{"MoArmors"});
         dependencies.put(PluginType.MoChestShop, new String[]{"MoChestShop"});
+        dependencies.put(PluginType.EssentialsX, new String[]{"EssentialsX"});
+        dependencies.put(PluginType.RivalHarvesterHoes, new String[]{"RivalHarvesterHoes"});
+        dependencies.put(PluginType.RivalPets, new String[]{"RivalPets"});
+        dependencies.put(PluginType.RivalPickaxes, new String[]{"RivalPickaxes"});
+        dependencies.put(PluginType.mcMMO, new String[]{"mcMMO"});
+        dependencies.put(PluginType.AuraSkills, new String[]{"AuraSkills"});
+        dependencies.put(PluginType.EcoSkills, new String[]{"EcoSkills"});
+        dependencies.put(PluginType.EcoJobs, new String[]{"EcoJobs"});
     }
 
     public void startCheckingDependencies(MoCore main) {

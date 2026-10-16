@@ -18,6 +18,15 @@ public enum PluginType {
     JobsReborn,
     PlayerPoints,
     DecentHolograms,
+    EssentialsX,
+    RivalHarvesterHoes,
+    RivalPickaxes,
+    RivalPets,
+    NextGens,
+    mcMMO,
+    AuraSkills,
+    EcoSkills,
+    EcoJobs,
 
     None
 }

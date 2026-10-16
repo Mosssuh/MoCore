@@ -36,6 +36,7 @@ public class MoItemStack {
     }
 
     public MoItemStack setName(String name) {
+        if (name == null) return this;
         ItemMeta itemMeta = itemStack.getItemMeta();
         if (itemMeta != null) {
             itemMeta.setDisplayName(UsefulString.get(name).hex().apply());
@@ -49,6 +50,7 @@ public class MoItemStack {
         if (itemMeta != null) {
             List<String> newLore = new ArrayList<>();
             for (String line : lore) {
+                if (line == null) continue;
                 newLore.add(UsefulString.get(line).hex().apply());
             }
             itemMeta.setLore(newLore);
@@ -60,6 +62,7 @@ public class MoItemStack {
     public MoItemStack setLore(ArrayList<String> lore) {
         ItemMeta itemMeta = itemStack.getItemMeta();
         if (itemMeta != null) {
+            if (lore == null || lore.isEmpty()) return this;
             List<String> newLore = new ArrayList<>();
             for (String line : lore) {
                 newLore.add(UsefulString.get(line).hex().apply());
@@ -71,6 +74,7 @@ public class MoItemStack {
     }
 
     public MoItemStack addLoreLine(String line) {
+        if (line == null) return this;
         ItemMeta itemMeta = itemStack.getItemMeta();
         if (itemMeta != null) {
             List<String> lore = itemMeta.getLore();
